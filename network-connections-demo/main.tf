@@ -9,13 +9,15 @@
 #  The provider instance hosts a small web service (Python/Flask in a Docker container)
 #  Which can be called via the VPC Endpoint's DNS name.  Find the VPC endpoint and copy 
 #  one of it's DNS names.  Use the session manager link to connect to the consumer instance.
-#  Call the web service like this:  curl http://<DNSNAME>/api?value=2 .
+#  Call the web service like this:  
+#        curl http://<DNSNAME>/api?value=2 .
 #  
-#  To demonstrate VPC peering, create the stack with option 2.  Find the 
-#  private IP address of the provider instance.  Use
-#  the session manager link to connect to the consumer instance.  Ping the
-#  destination instance like this:   ping -c 6 <IP-ADDRESS>     or call the web service 
-#  like this:  curl http://<IP-ADDRESS>/api?value=2
+#  To demonstrate VPC peering, create the stack with option 2 (terraform apply -var "connection_type=2").
+#  Find the private IP address of the provider instance.  Use the session manager link 
+#  to connect to the consumer instance.  Ping the destination instance like this:   
+#        ping -c 6 <IP-ADDRESS>     
+#  or call the web service like this:  
+#        curl http://<IP-ADDRESS>/api?value=2
 #
 #  To demonstrate Transit Gateway, create the stack with option 3.  Follow the
 #  same demo ideas for peering.
