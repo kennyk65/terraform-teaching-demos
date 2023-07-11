@@ -20,8 +20,8 @@
 #  or call the web service like this:  
 #        curl http://<IP-ADDRESS>/api?value=2
 #
-#  To demonstrate Transit Gateway, create the stack with option 3.  Follow the
-#  same demo ideas for peering.
+#  To demonstrate Transit Gateway, create the stack with option 3 (terraform apply -var "connection_type=3").
+#  Follow the same demo ideas for peering.
 #
 #  Optional: For any of these options, use the link in stack output to open
 #  VPC / Network Manager / Reachability Analyzer.  Enter source as consumer 
