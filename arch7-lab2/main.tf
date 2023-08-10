@@ -1,6 +1,12 @@
+
+# TODO: NOT WORKING AT THE MOMENT.  SESSION MANAGER CONNECTION NOT WORKING AND WEB INTERFACE NOT COMING UP
+
 provider "aws" {
   region = "us-west-2"  # Change to your desired AWS region
   # Add any necessary AWS credentials configuration here
+  default_tags {
+    tags = local.default_tags
+  }
 }
 
 variable "stack_name" {
@@ -9,19 +15,28 @@ variable "stack_name" {
   description = "Common name used in resources built by this configuration"
 }
 
+# Define default tags
+locals {
+  default_tags = {
+    Stack = "${var.stack_name}"
+  }
+}
+
+# Set the default tags
+terraform {
+  required_version = ">= 0.12"
+}
+
 data "aws_ami" "latest_ami" {
   most_recent = true
-
   filter {
     name   = "name"
-    values = ["amzn2-ami-hvm-*"]
+    values = ["al2023-ami-2023*"]
   }
-
   filter {
     name   = "virtualization-type"
     values = ["hvm"]
   }
-
   owners = ["amazon"]
 }
 
@@ -29,17 +44,13 @@ data "aws_ami" "latest_ami" {
 resource "aws_vpc" "lab_vpc" {
   cidr_block       = "10.0.0.0/16"
   enable_dns_hostnames = true
-
   tags = {
-    Name = "Lab VPC",
-    Stack = "${var.stack_name}"
-  }
+    Name = "Lab VPC"  }
 }
 
 resource "aws_internet_gateway" "lab_igw" {
   tags = {
-    Name = "${var.stack_name}-LabIGW"
-  }
+    Name = "${var.stack_name}-LabIGW"  }
   vpc_id = aws_vpc.lab_vpc.id
 }
 # Note - No gateway attachment in terraform?
@@ -47,14 +58,16 @@ resource "aws_internet_gateway" "lab_igw" {
 
 resource "aws_eip" "nat_eip" {
   domain = "vpc"
+  tags = {
+    Stack = "${var.stack_name}"
+  }
 }
 
 resource "aws_nat_gateway" "nat_gateway" {
   allocation_id = aws_eip.nat_eip.id
   subnet_id     = aws_subnet.public_subnet.id
   tags = {
-    Name = "NAT-${var.stack_name}"
-  }
+    Name = "NAT-${var.stack_name}"  }
 }
 
 resource "aws_subnet" "public_subnet" {
@@ -63,8 +76,7 @@ resource "aws_subnet" "public_subnet" {
   availability_zone = element(data.aws_availability_zones.available.names, 0)
   map_public_ip_on_launch = true
   tags = {
-    Name = "Public Subnet"
-  }
+    Name = "Public Subnet"  }
 }
 
 resource "aws_subnet" "private_subnet" {
@@ -72,28 +84,27 @@ resource "aws_subnet" "private_subnet" {
   cidr_block = "10.0.2.0/23"
   availability_zone = element(data.aws_availability_zones.available.names, 0)
   tags = {
-    Name = "Private Subnet"
-  }
+    Name = "Private Subnet"  }
 }
 
 resource "aws_route_table" "public_route_table" {
   vpc_id = aws_vpc.lab_vpc.id
   tags = {
-    Name = "Public Route Table"
-  }
+    Name = "Public Route Table"  }
 }
 
 resource "aws_route" "public_route" {
   route_table_id         = aws_route_table.public_route_table.id
   destination_cidr_block = "0.0.0.0/0"
   gateway_id             = aws_internet_gateway.lab_igw.id
+  # Wait until the IGW is attached to the VPC:
+  depends_on = [aws_internet_gateway.lab_igw]  
 }
 
 resource "aws_route_table" "private_route_table" {
   vpc_id = aws_vpc.lab_vpc.id
   tags = {
-    Name = "Private Route Table"
-  }
+    Name = "Private Route Table"  }
 }
 
 resource "aws_route" "private_route" {
@@ -122,8 +133,7 @@ resource "aws_security_group" "public_security_group" {
     cidr_blocks = ["0.0.0.0/0"]
   }
   tags = {
-    Name = "Public SG"
-  }
+    Name = "Public SG"  }
 }
 
 resource "aws_security_group" "private_security_group" {
@@ -136,8 +146,7 @@ resource "aws_security_group" "private_security_group" {
     security_groups = [aws_security_group.public_security_group.id]
   }
   tags = {
-    Name = "Private SG"
-  }
+    Name = "Private SG"  }
 }
 
 resource "aws_instance" "public_instance" {
@@ -148,23 +157,27 @@ resource "aws_instance" "public_instance" {
   security_groups = [aws_security_group.public_security_group.id]
   user_data = <<-EOF
           #!/bin/bash
-          yum update -y &&
-          amazon-linux-extras install -y lamp-mariadb10.2-php7.2 php7.2 &&
-          yum install -y httpd &&
+          # To connect to your EC2 instance and install the Apache web server with PHP
+          yum update -y
+          yum install -y httpd php8.1
           systemctl enable httpd.service
           systemctl start httpd
           cd /var/www/html
-          wget  https://us-west-2-tcprod.s3.amazonaws.com/courses/ILT-TF-200-ARCHIT/v7.0.0/lab-2-VPC/scripts/instanceData.zip
+          wget  https://us-west-2-tcprod.s3.amazonaws.com/courses/ILT-TF-200-ARCHIT/v7.5.0.prod-b5a35238/lab-2-VPC/scripts/instanceData.zip
           unzip instanceData.zip
   EOF
+  # Wait until the public route is attached to the public route table:
+  depends_on = [aws_internet_gateway.lab_igw]  
   tags = {
-    Name = "Public Instance"
-  }
+    Name = "Public Instance"  }
 }
 
 resource "aws_iam_instance_profile" "ec2_instance_profile" {
   name = "${var.stack_name}-EC2-SSM-Role"
   role = aws_iam_role.instance_role.name
+  tags = {
+    Stack = "${var.stack_name}"
+  }
 }
 
 resource "aws_iam_role" "instance_role" {
@@ -185,6 +198,9 @@ resource "aws_iam_role" "instance_role" {
     "arn:aws:iam::aws:policy/service-role/AmazonEC2RoleforSSM",
     "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
   ]
+  tags = {
+    Stack = "${var.stack_name}"
+  }
 }
 
 resource "aws_instance" "private_instance" {
@@ -194,8 +210,7 @@ resource "aws_instance" "private_instance" {
   subnet_id     = aws_subnet.private_subnet.id
   security_groups = [aws_security_group.private_security_group.id]
   tags = {
-    Name = "Private Instance"
-  }
+    Name = "Private Instance"  }
 }
 
 # Data Sources
