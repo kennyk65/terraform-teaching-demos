@@ -1,5 +1,5 @@
 
-# TODO: NOT WORKING AT THE MOMENT.  SESSION MANAGER CONNECTION NOT WORKING AND WEB INTERFACE NOT COMING UP
+# Replica of AWS Architecting Lab 2
 
 provider "aws" {
   region = "us-west-2"  # Change to your desired AWS region
@@ -37,6 +37,10 @@ data "aws_ami" "latest_ami" {
     name   = "virtualization-type"
     values = ["hvm"]
   }
+  filter {
+    name   = "architecture"
+    values = ["x86_64"]
+  }
   owners = ["amazon"]
 }
 
@@ -45,12 +49,12 @@ resource "aws_vpc" "lab_vpc" {
   cidr_block       = "10.0.0.0/16"
   enable_dns_hostnames = true
   tags = {
-    Name = "Lab VPC"  }
+    Name = "LabVPC-${var.stack_name}"  }
 }
 
 resource "aws_internet_gateway" "lab_igw" {
   tags = {
-    Name = "${var.stack_name}-LabIGW"  }
+    Name = "LabIGW-${var.stack_name}"  }
   vpc_id = aws_vpc.lab_vpc.id
 }
 # Note - No gateway attachment in terraform?
@@ -58,9 +62,6 @@ resource "aws_internet_gateway" "lab_igw" {
 
 resource "aws_eip" "nat_eip" {
   domain = "vpc"
-  tags = {
-    Stack = "${var.stack_name}"
-  }
 }
 
 resource "aws_nat_gateway" "nat_gateway" {
@@ -76,7 +77,7 @@ resource "aws_subnet" "public_subnet" {
   availability_zone = element(data.aws_availability_zones.available.names, 0)
   map_public_ip_on_launch = true
   tags = {
-    Name = "Public Subnet"  }
+    Name = "PublicSubnet-${var.stack_name}"  }
 }
 
 resource "aws_subnet" "private_subnet" {
@@ -84,13 +85,13 @@ resource "aws_subnet" "private_subnet" {
   cidr_block = "10.0.2.0/23"
   availability_zone = element(data.aws_availability_zones.available.names, 0)
   tags = {
-    Name = "Private Subnet"  }
+    Name = "PrivateSubnet-${var.stack_name}"  }
 }
 
 resource "aws_route_table" "public_route_table" {
   vpc_id = aws_vpc.lab_vpc.id
   tags = {
-    Name = "Public Route Table"  }
+    Name = "PublicRouteTable-${var.stack_name}"  }
 }
 
 resource "aws_route" "public_route" {
@@ -104,7 +105,7 @@ resource "aws_route" "public_route" {
 resource "aws_route_table" "private_route_table" {
   vpc_id = aws_vpc.lab_vpc.id
   tags = {
-    Name = "Private Route Table"  }
+    Name = "PrivateRouteTable-${var.stack_name}"  }
 }
 
 resource "aws_route" "private_route" {
@@ -132,8 +133,17 @@ resource "aws_security_group" "public_security_group" {
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
+  # WARNING: TERRAFORM REQUIRES EXPLICIT DEFINITION OF EGRESS ROUTE
+  egress {
+    cidr_blocks = [
+      "0.0.0.0/0"
+    ]
+    from_port = 0
+    protocol  = "-1"
+    to_port   = 0
+  }
   tags = {
-    Name = "Public SG"  }
+    Name = "PublicSG-${var.stack_name}"  }
 }
 
 resource "aws_security_group" "private_security_group" {
@@ -145,8 +155,17 @@ resource "aws_security_group" "private_security_group" {
     protocol    = "tcp"
     security_groups = [aws_security_group.public_security_group.id]
   }
+  # WARNING: TERRAFORM REQUIRES EXPLICIT DEFINITION OF EGRESS ROUTE
+  egress {
+    cidr_blocks = [
+      "0.0.0.0/0"
+    ]
+    from_port = 0
+    protocol  = "-1"
+    to_port   = 0
+  }
   tags = {
-    Name = "Private SG"  }
+    Name = "PrivateSG-${var.stack_name}"  }
 }
 
 resource "aws_instance" "public_instance" {
@@ -168,20 +187,23 @@ resource "aws_instance" "public_instance" {
   EOF
   # Wait until the public route is attached to the public route table:
   depends_on = [aws_internet_gateway.lab_igw]  
+  metadata_options {
+    http_tokens = "optional"
+  }
   tags = {
-    Name = "Public Instance"  }
+    Name = "PublicInstance-${var.stack_name}"  }
 }
 
 resource "aws_iam_instance_profile" "ec2_instance_profile" {
-  name = "${var.stack_name}-EC2-SSM-Role"
+  name = "EC2SSMRole-${var.stack_name}"
   role = aws_iam_role.instance_role.name
   tags = {
-    Stack = "${var.stack_name}"
+    Stack = "Ec2SsmRole-${var.stack_name}"
   }
 }
 
 resource "aws_iam_role" "instance_role" {
-  name = "${var.stack_name}-EC2-SSM-Role"
+  name = "EC2-SSM-Role-${var.stack_name}"
   assume_role_policy = jsonencode({
     Version = "2012-10-17",
     Statement = [
@@ -199,7 +221,7 @@ resource "aws_iam_role" "instance_role" {
     "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
   ]
   tags = {
-    Stack = "${var.stack_name}"
+    Stack = "EC2-SSM-Role-${var.stack_name}"
   }
 }
 
@@ -210,7 +232,7 @@ resource "aws_instance" "private_instance" {
   subnet_id     = aws_subnet.private_subnet.id
   security_groups = [aws_security_group.private_security_group.id]
   tags = {
-    Name = "Private Instance"  }
+    Name = "PrivateInstance-${var.stack_name}"  }
 }
 
 # Data Sources
