@@ -77,7 +77,7 @@ resource "aws_subnet" "public_subnet" {
   availability_zone = element(data.aws_availability_zones.available.names, 0)
   map_public_ip_on_launch = true
   tags = {
-    Name = "PublicSubnet-${var.stack_name}"  }
+    Name = "PublicSubnetA-${var.stack_name}"  }
 }
 
 resource "aws_subnet" "private_subnet" {
@@ -85,7 +85,7 @@ resource "aws_subnet" "private_subnet" {
   cidr_block = "10.0.2.0/23"
   availability_zone = element(data.aws_availability_zones.available.names, 0)
   tags = {
-    Name = "PrivateSubnet-${var.stack_name}"  }
+    Name = "PrivateSubnetA-${var.stack_name}"  }
 }
 
 resource "aws_route_table" "public_route_table" {
@@ -217,7 +217,6 @@ resource "aws_iam_role" "instance_role" {
     ]
   })
   managed_policy_arns = [
-    "arn:aws:iam::aws:policy/service-role/AmazonEC2RoleforSSM",
     "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
   ]
   tags = {
@@ -234,6 +233,36 @@ resource "aws_instance" "private_instance" {
   tags = {
     Name = "PrivateInstance-${var.stack_name}"  }
 }
+
+# The following resources are only needed to support later labs:
+resource "aws_subnet" "public_subnetb" {
+  vpc_id     = aws_vpc.lab_vpc.id
+  cidr_block = "10.0.6.0/24"
+  availability_zone = element(data.aws_availability_zones.available.names, 1)
+  map_public_ip_on_launch = true
+  tags = {
+    Name = "PublicSubnetB-${var.stack_name}"  }
+}
+
+resource "aws_subnet" "private_subnetb" {
+  vpc_id     = aws_vpc.lab_vpc.id
+  cidr_block = "10.0.4.0/23"
+  availability_zone = element(data.aws_availability_zones.available.names, 1)
+  tags = {
+    Name = "PrivateSubnetB-${var.stack_name}"  }
+}
+
+resource "aws_route_table_association" "public_subnet_b_association" {
+  subnet_id      = aws_subnet.public_subnetb.id
+  route_table_id = aws_route_table.public_route_table.id
+}
+
+resource "aws_route_table_association" "private_subnet_b_association" {
+  subnet_id      = aws_subnet.private_subnetb.id
+  route_table_id = aws_route_table.private_route_table.id
+}
+
+
 
 # Data Sources
 data "aws_availability_zones" "available" {}
