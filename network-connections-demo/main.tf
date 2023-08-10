@@ -238,6 +238,7 @@ resource "aws_security_group" "ConsumerSecurityGroup" {
     protocol  = "tcp"
     to_port   = 80
   }
+  # WARNING: TERRAFORM REQUIRES EXPLICIT DEFINITION OF EGRESS ROUTE
   egress {
     cidr_blocks = [
       "0.0.0.0/0"
