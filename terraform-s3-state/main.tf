@@ -9,8 +9,11 @@
 #     key            = "YOUR-MODULE/YOUR-WORKSPACE/terraform.tfstate"
 #     region         = "us-west-2"
 #     encrypt        = true
-#     dynamodb_table = "terraform-state-lock"
+#     dynamodb_table = "terraform-lock"
 #   }
+#
+#  Alter the bucket name, dynamoDB table name to match the values established in this configuration.
+#  Alter the module and workspace names to match the values used by the other configuration.
 
 
 
@@ -27,9 +30,24 @@ provider "aws" {
   region = "us-west-2"  # Hard coded intentionally
 }
 
+# Set the bucket name to whatever you like:
+variable "bucket_name" {
+  type        = string
+  default     = "kk-admin-terraform"
+  description = "Globally unique bucket name for the S3 bucket you wish to create to store your terraform state files."
+}
+
+# Set the dynamoDB table name to whatever you like:
+variable "dynamoDB_table__name" {
+  type        = string
+  default     = "terraform-lock"
+  description = "Name of the DynamoDB table you wish to create to store the lock indicators."
+}
+
+
 # S3 bucket dedicated for storing Terraform state files.
 resource "aws_s3_bucket" "terraform_state" {
-  bucket = "kk-admin-terraform"
+  bucket = "${var.bucket_name}"
   tags = {
     Name        = "Terraform State Bucket"
     Environment = "Universal"
@@ -60,7 +78,7 @@ resource "aws_s3_bucket_lifecycle_configuration" "cleanup_old_versions" {
 
 # Terraform's remote state management requires a DDB table for locking: 
 resource "aws_dynamodb_table" "terraform_lock" {
-  name         = "terraform-lock"
+  name         = "$var.dynamoDB_table__name"
   billing_mode = "PAY_PER_REQUEST"
   hash_key     = "LockID"
   attribute {
