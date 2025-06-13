@@ -89,3 +89,8 @@ resource "aws_security_group" "allow_80" {
     cidr_blocks = ["0.0.0.0/0"]
   }  
 }
+
+# Link to the public IP address of the ec2 instance:  
+output "instance_public_link" {
+  value = "http://${aws_instance.example.public_ip}"
+}
