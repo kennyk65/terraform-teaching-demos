@@ -1,8 +1,27 @@
 
 # Replica of AWS Architecting Lab 2
 
+# define provider and acceptable versions.
+# Use remote state management instead of local files
+terraform {
+  required_providers {
+    aws = {
+      source = "hashicorp/aws"
+      version = ">= 5.80.0, < 6.0.0"    # Not tested beyond v5.
+    }
+  }
+  backend "s3" {
+    bucket         = "kk-admin-terraform"
+    key            = "arch7-lab2/default/terraform.tfstate"
+    region         = "us-west-2"
+    dynamodb_table = "terraform-lock"
+    encrypt        = true
+  }  
+}
+
+
 provider "aws" {
-  region = "us-west-2"  # Change to your desired AWS region
+  # region = "us-west-2"  # Change to your desired AWS region
   # Add any necessary AWS credentials configuration here
   default_tags {
     tags = local.default_tags
@@ -19,13 +38,11 @@ variable "stack_name" {
 locals {
   default_tags = {
     Stack = "${var.stack_name}"
+    Workspace = "${terraform.workspace}"
   }
 }
 
-# Set the default tags
-terraform {
-  required_version = ">= 0.12"
-}
+
 
 data "aws_ami" "latest_ami" {
   most_recent = true
@@ -216,12 +233,13 @@ resource "aws_iam_role" "instance_role" {
       }
     ]
   })
-  managed_policy_arns = [
-    "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
-  ]
   tags = {
     Stack = "EC2-SSM-Role-${var.stack_name}"
   }
+}
+resource "aws_iam_role_policy_attachment" "ssm_core_attach" {
+  role       = aws_iam_role.instance_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
 }
 
 resource "aws_instance" "private_instance" {
