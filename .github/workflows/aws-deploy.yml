@@ -1,5 +1,10 @@
 name: Terraform AWS Deploy
 
+# This GitHub action uses Terraform to deploy the contents of the "aws-deploy" folder only.
+# It can probably be extended to be triggerred by other paths as well.
+# The IAM role described by the secrets.AWS_ROLE_ARN is defined by https://github.com/kennyk65/terraform-teaching-demos/blob/main/github-actions-support/main.tf
+
+
 on:
   push:
     branches:
@@ -34,8 +39,6 @@ jobs:
           role-session-name: GitHubActionsTerraformSession
 
       - name: Setup Terraform
-        # This action installs a specific version of Terraform.
-        # It's good practice to pin the version for consistent builds.
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: 1.5.7 # <<< Specify your desired Terraform version

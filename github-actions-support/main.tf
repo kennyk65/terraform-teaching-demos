@@ -1,3 +1,12 @@
+
+# This configuration establishes the IAM Role and permissions needed to allow Terraform to push changes to AWS via GitHub Actions.
+# Basic GitHub actions requires an IAM Role associated with an OIDC connect provider for GitHub - all defined here.
+# The Role's permissions are a bit tricky since they need to handle anything that terraform apply can throw at it.
+# This specific example is tailored to support changes in the "aws-deploy" folder only.
+#
+# SEE the GitHub actions that use this Role:  https://github.com/kennyk65/terraform-teaching-demos/blob/main/.github/workflows/aws-deploy.yml
+ 
+
 terraform {
   required_providers {
     aws = {
@@ -7,7 +16,7 @@ terraform {
   }
   backend "s3" {
     bucket         = "kk-admin-terraform"
-    key            = "aws-deploy/default/terraform.tfstate"
+    key            = "github-actions-support/default/terraform.tfstate"
     region         = "us-west-2"
     dynamodb_table = "terraform-lock"
     encrypt        = true
@@ -141,7 +150,9 @@ resource "aws_iam_policy" "application_resource_policy" {
         Action = [
           "s3:CreateBucket",      # If your Terraform will create this bucket
           "s3:DeleteBucket",      # If your Terraform will delete this bucket
-          "s3:ListBucket"
+          "s3:ListBucket",
+          "s3:Get*",
+          "iam:DetachRolePolicy"
         ],
         Resource = "*"
       },
