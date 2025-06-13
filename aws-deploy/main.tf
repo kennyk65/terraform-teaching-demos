@@ -1,4 +1,8 @@
 
+#  This is a simple configuration file of minimal complexity (except the backend state management).
+#  Its purpose is to demonstrate running Terraform within a GitHub action.
+
+
 terraform {
   required_providers {
     aws = {
