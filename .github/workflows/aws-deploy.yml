@@ -1,0 +1,66 @@
+name: Terraform AWS Deploy
+
+on:
+  push:
+    branches:
+      - main 
+    paths:
+      - 'aws-deploy/**' 
+env:
+  AWS_REGION: us-west-2
+  TF_WORKING_DIRECTORY: aws-deploy # The directory where your Terraform code resides
+
+permissions:
+  id-token: write  # Required for OIDC authentication.
+  contents: read   # Required to clone the repository.
+
+jobs:
+  terraform-apply:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ env.TF_WORKING_DIRECTORY }} # All commands in this job will run from this directory
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4 # Checkout the code from your repository
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v3
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}          
+          aws-region: ${{ env.AWS_REGION }}
+          # Recommended for OIDC: role-session-name can be used to identify sessions in CloudTrail
+          role-session-name: GitHubActionsTerraformSession
+
+      - name: Setup Terraform
+        # This action installs a specific version of Terraform.
+        # It's good practice to pin the version for consistent builds.
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.5.7 # <<< Specify your desired Terraform version
+
+      - name: Terraform Init
+        id: init
+        run: terraform init
+
+      - name: Terraform Plan
+        id: plan
+        run: terraform plan -no-color -input=false -out=tfplan
+        # Ensure plan output is visible in logs
+        continue-on-error: true
+
+      - name: Terraform Apply
+        id: apply
+        # The 'if' condition ensures apply only runs if the plan succeeded
+        if: steps.plan.outcome == 'success'
+        run: terraform apply -input=false tfplan
+        # Optional: Add an approval step for 'terraform apply' in a production environment
+        # You can use GitHub Environments for manual approvals: https://docs.github.com/en/actions/deployment/environments
+
+      - name: Capture Terraform Output (Optional)
+        if: always() # Runs regardless of previous step success/failure
+        run: |
+          echo "Terraform command execution complete."
+          # You might want to capture specific outputs for logging or subsequent steps
+          # terraform output -json > terraform_outputs.json
