@@ -135,7 +135,7 @@ resource "aws_iam_policy" "application_resource_policy" {
   policy = jsonencode({
     Version = "2012-10-17",
     Statement = [
-      # Allow terraform to create, update, and delete a bucket.
+      # Allow terraform to create, update, and delete a bucket, or whatever your .tf file specifies:
       {
         Effect = "Allow",
         Action = [
@@ -144,9 +144,16 @@ resource "aws_iam_policy" "application_resource_policy" {
           "s3:ListBucket"
         ],
         Resource = "*"
+      },
+      # Permissions for Terraform to read the IAM resources themselves:
+      {
+        Effect = "Allow",
+        Action = [
+          "iam:Get*",
+          "iam:List*"
+        ],
+        Resource = "*"
       }
-      # Add other AWS service permissions here if your 'aws-deploy' Terraform manages
-      # resources beyond just this S3 bucket (e.g., EC2, Lambda, RDS, etc.).
     ]
   })
   tags = {
