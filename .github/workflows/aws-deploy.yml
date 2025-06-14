@@ -5,12 +5,17 @@ name: Terraform AWS Deploy
 # The IAM role described by the secrets.AWS_ROLE_ARN is defined by https://github.com/kennyk65/terraform-teaching-demos/blob/main/github-actions-support/main.tf
 
 
+# Trigger builds when pushes are made to the main branch, 
+# but only the folders listed under paths:
 on:
   push:
     branches:
       - main 
     paths:
       - 'aws-deploy/**' 
+
+# Setting the region here rather than within the main.tf file.
+# Focus Terraform on the aws-deploy folder:      
 env:
   AWS_REGION: us-west-2
   TF_WORKING_DIRECTORY: aws-deploy # The directory where your Terraform code resides
@@ -27,9 +32,16 @@ jobs:
         working-directory: ${{ env.TF_WORKING_DIRECTORY }} # All commands in this job will run from this directory
 
     steps:
+
+      # The entire repository is checked out; 
+      # not practical to limit this to the folder in question:
       - name: Checkout repository
         uses: actions/checkout@v4 # Checkout the code from your repository
 
+      # CRITICAL: Terraform must have AWS credentials to manage remote state and manage resources.
+      # A role has been prepared which this Action will assume, making credentials available
+      # No hard-coded credentials are used.
+      # See the github-actions-support folder for this role's configuration. 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v3
         with:
@@ -38,6 +50,7 @@ jobs:
           # Recommended for OIDC: role-session-name can be used to identify sessions in CloudTrail
           role-session-name: GitHubActionsTerraformSession
 
+      # Install Terraform:    
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
         with:
@@ -58,9 +71,7 @@ jobs:
         # The 'if' condition ensures apply only runs if the plan succeeded
         if: steps.plan.outcome == 'success'
         run: terraform apply -input=false tfplan
-        # Optional: Add an approval step for 'terraform apply' in a production environment
-        # You can use GitHub Environments for manual approvals: https://docs.github.com/en/actions/deployment/environments
-
+        
       - name: Capture Terraform Output (Optional)
         if: always() # Runs regardless of previous step success/failure
         run: |
