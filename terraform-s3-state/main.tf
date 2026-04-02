@@ -21,7 +21,7 @@ terraform {
   required_providers {
     aws = {
       source = "hashicorp/aws"
-      version = ">= 5.80.0, < 6.0.0"    # Not tested beyond v5.
+      version = ">= 5.80.0, < 7.0.0"    # Not tested beyond v5.
     }
   }
 }
@@ -78,7 +78,7 @@ resource "aws_s3_bucket_lifecycle_configuration" "cleanup_old_versions" {
 
 # Terraform's remote state management requires a DDB table for locking: 
 resource "aws_dynamodb_table" "terraform_lock" {
-  name         = "$var.dynamoDB_table__name"
+  name         = "${var.dynamoDB_table__name}"
   billing_mode = "PAY_PER_REQUEST"
   hash_key     = "LockID"
   attribute {
