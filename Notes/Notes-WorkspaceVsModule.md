@@ -36,6 +36,8 @@ This approach treats your infrastructure as a **Reusable Module**, which is then
 * **Credential Isolation:** You can easily map different IAM roles or service accounts to specific directories, preventing cross-environment accidents.
 * **Version Control:** You can point Dev to a "feature branch" of a module while keeping Prod pinned to a "stable" tag.
 
+ALSO - Modules can be published to repositories, and referenced by their version number.  This allows the prod stack to use v 1.0 of a module while dev uses a local module, or v2.
+
 ---
 
 ## Comparison Summary

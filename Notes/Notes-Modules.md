@@ -4,7 +4,7 @@ Terraform **Modules** are containers for multiple resources that are used togeth
 * **Root Module:** The directory where you run `terraform apply`.
 * **Child Module:** A separate directory (local or remote) called by the root module.
     * Note: it can be above, beside, or below the root module in the file system.
-
+* **State:** Is managed by the Root module.
 
 ---
 
@@ -21,7 +21,7 @@ In your root configuration, you call a module using the `module` block.
 
 ```hcl
 module "app_bucket" {
-  source = "./modules/s3-bucket" # Path to the module code, located below the calling module.
+  source = "./modules/s3-bucket" # Path to the module code. (this example is located below the calling module).
 
   # --- Inputs ---
   bucket_name = "my-unique-app-data-2026"
