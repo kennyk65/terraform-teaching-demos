@@ -79,7 +79,8 @@ Note that the code here involves two separate folders/repositories:
 
 1. Setup Role ARN and target Region in GitHub:
     * Copy output from the previous step, i.e. `role_arn = arn:aws:iam::123456789012:role/GitHubTerraform`
-    * Go to the **Infrastructure** repository where you will be running your GitHub Actions.  *→ Settings → Secrets and variables → Actions*
+    * Go to the **Infrastructure** repository where you will be running your GitHub Actions.  
+        * → Settings → Secrets and variables → Actions
     * Save a new repository secret (adjust this value):
         ```
         Name:  AWS_ROLE_ARN
@@ -92,8 +93,8 @@ Note that the code here involves two separate folders/repositories:
         ```
 
 1. Adjust GitHub Repo Settings
-    * *Settings → Actions → General → 
-✅ "Read and write permissions"*
+    * Settings → Actions → General → 
+✅ "Read and write permissions"
 
 1. *GitHub Actions.*  This is a sample GitHub Action.  It is triggered when a push is made to the main branch of the **Infrastructure** repository, or when a pull request is created:
 
