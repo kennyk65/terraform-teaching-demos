@@ -63,6 +63,20 @@ Note that the code here involves two separate folders/repositories:
     repo_branch = "main"
     ```
 
+1. Deploy this stack
+    
+    - Run Terraform:
+    ```
+    $ terraform apply
+    ```
+
+    - Or, override variable values if you like:
+    ```
+    $ terraform apply -var="repo_org=YOURORG" -var="repo_name=myrepo" -var="repo_branch=main"
+    ```
+    - Record the vlaue of the Role ARN, it is needed in the next step.
+    
+
 1. Setup Role ARN and target Region in GitHub:
     * Copy output from the previous step, i.e. `role_arn = arn:aws:iam::123456789012:role/GitHubTerraform`
     * Go to the **Infrastructure** repository where you will be running your GitHub Actions.  * → Settings → Secrets and variables → Actions
@@ -77,7 +91,7 @@ Note that the code here involves two separate folders/repositories:
         Value: us-west-2
         ```
 
-1. GitHub Repo Settings
+1. Adjust GitHub Repo Settings
     * Settings → Actions → General → 
 ✅ "Read and write permissions"
 
@@ -140,9 +154,6 @@ Note that the code here involves two separate folders/repositories:
     }
     ```
 
-1. Deploy
-    ```
-    $ terraform apply -var="repo_org=YOURORG" -var="repo_name=myrepo" -var="repo_branch=main"
-    $ Copy role_arn → GitHub Secrets.AWS_ROLE_ARN
-    $ git push → GitHub runs Terraform
+1. Use
+    - The GitHub Action will execute every time there is a commit to the main branch of your repository.  It will automatically apply changes to your account.
     ```
