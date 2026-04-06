@@ -1,4 +1,4 @@
-OIDC/GitHub Actions Terraform Flow 
+## OIDC/GitHub Actions Terraform Flow 
 
 Note that the code here involves two separate folders/repositories:
 * An **IAMBootstrap** repository to establish the OIDC connect provider and IAM role.
@@ -127,7 +127,7 @@ Note that the code here involves two separate folders/repositories:
         run: terraform apply -auto-approve
     ```
 
-1. Reference and use this role in the **Infrastructure** repository:
+1. Your **Infrastructure** repository will contain normal `*.tf` files.  Allow GitHub Actions to dynamically supply the region code rather than hard-coding:
 
     `main.tf` 
 
