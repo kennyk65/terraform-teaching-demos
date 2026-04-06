@@ -125,11 +125,11 @@ phases:
       - terraform --version
       - terraform init -input=false
       - echo "Running Terraform Plan..."
-      - terraform plan -input=false 
+      - terraform plan -input=false -out=tfplan
   build:
     commands:
-      - echo "Running Terraform Apply..."
-      - terraform apply -auto-approve -input=false
+      - echo "Running Terraform Apply using previous plan..."
+      - terraform apply -auto-approve -input=false tfplan
 ```
 
 ---
