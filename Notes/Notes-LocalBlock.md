@@ -1,4 +1,8 @@
-The `locals` block in Terraform is used to define **local constants** or **computed variables**. Think of them as internal script variables: they allow you to assign a name to an expression so you can reuse it throughout your module without repeating logic.
+# The Terraform `locals{}` block.
+
+
+
+The `locals{}` block in Terraform is used to define **local constants** or **computed variables**. Think of them as internal script variables: they allow you to assign a name to an expression so you can reuse it throughout your module without repeating logic.
 
 Unlike `variables`, which are inputs provided by a user, `locals` are private to the configuration and cannot be set from outside the module.
 
@@ -14,7 +18,7 @@ Unlike `variables`, which are inputs provided by a user, `locals` are private to
 
 ## General Usage & Syntax
 
-You can define multiple values within a single `locals` block. You reference them using `local.<NAME>` (note: the block is plural `locals`, but the reference is singular `local`).
+You can define multiple values within a single `locals` block. You reference them using `local.<NAME>` (note: the block is plural `locals`, but the reference is singular `local`).  (Also note, the `locals` block is unlabeled / anonymous - that is correct!)
 
 ```hcl
 locals {
@@ -68,11 +72,11 @@ You can use `locals` to determine settings based on the environment.
 
 ```hcl
 locals {
-  # Logic: Only use large instances in production
-  instance_type = var.environment == "prod" ? "m5.large" : "t3.micro"
+  # Logic: Only use large instances in production workspace
+  instance_type = terraform.workspace == "prod" ? "m5.large" : "t3.micro"
   
   # Logic: Determine if we should enable detailed monitoring (1-minute collection intervals, extra charge)
-  enable_monitoring = var.environment == "prod" ? true : false
+  enable_monitoring = terraform.workspace == "prod" ? true : false
 }
 
 resource "aws_instance" "server" {

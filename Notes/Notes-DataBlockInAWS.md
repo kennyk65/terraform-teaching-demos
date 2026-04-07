@@ -1,4 +1,10 @@
-The `data` block in Terraform is used to fetch information that is defined **outside** of Terraform, or defined by another separate Terraform configuration. Unlike a `resource` block, which tells Terraform to create and manage an object, a `data` block is read-only and acts as a query.
+# The Terraform `Data{}` block.
+
+
+
+The `data{}` block in Terraform is used to fetch information that is defined **outside** of Terraform, or defined by another separate Terraform configuration. 
+
+Unlike a `resource` block, which tells Terraform to create and manage an object, a `data` block is read-only and acts as a query.
 
 ### Common Use Cases
 
