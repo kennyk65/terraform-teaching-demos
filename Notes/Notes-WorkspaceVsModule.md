@@ -39,9 +39,8 @@ locals {
   # Fallback to 'default' if the workspace isn't explicitly defined
   config = lookup(local.env_settings, terraform.workspace, local.env_settings["default"])
 }
-
-------------
-
+```
+```
 resource "aws_instance" "web" {
   count         = local.config.instance_count
   instance_type = local.config.instance_type
