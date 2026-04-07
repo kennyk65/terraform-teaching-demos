@@ -131,6 +131,7 @@ phases:
       - echo "Running Terraform Apply using previous plan..."
       - terraform apply -auto-approve -input=false tfplan
 ```
+    - The `-out=tfplan` stores the exact plan in a binary file.  `terraform apply tfplan` executes exactly what was planned. No recalculating, no delay.    
 
 ---
 

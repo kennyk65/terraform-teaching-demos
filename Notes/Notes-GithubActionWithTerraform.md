@@ -135,12 +135,13 @@ Note that the code here involves two separate folders/repositories:
         run: terraform fmt -check
         
         - name: Terraform Plan
-        run: terraform plan
+        run: terraform plan -out=tfplan
         
         - name: Terraform Apply
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        run: terraform apply -auto-approve
+        run: terraform apply -auto-approve tfplan
     ```
+    - The `-out=tfplan` stores the exact plan in a binary file.  `terraform apply tfplan` executes exactly what was planned. No recalculating, no delay.    
 
 1. Your **Infrastructure** repository will contain normal `*.tf` files.  Allow GitHub Actions to dynamically supply the region code rather than hard-coding:
 
