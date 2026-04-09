@@ -35,6 +35,20 @@ variable "instance_size" {
 #### 2. `validation` Blocks
 You can have multiple validation blocks for a single variable. 
 
+This validation block restricts the instance count to 1 to 10:
+```
+variable "instance_count" {
+  type        = number
+  description = "Number of instances to deploy"
+
+  validation {
+    condition     = var.instance_count > 0 && var.instance_count <= 10
+    error_message = "The instance_count must be between 1 and 10."
+  }
+}
+```
+
+This validation rule requires that the bucket name start with the letters "dev-"
 ```hcl
 variable "bucket_name" {
   type    = string
