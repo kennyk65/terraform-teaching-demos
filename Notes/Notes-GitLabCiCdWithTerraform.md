@@ -1,3 +1,4 @@
+
 # GitLab CI/CD with Terraform (AWS)
 
 ## Overview
@@ -8,11 +9,10 @@ Key ideas:
 
 * Pipelines are defined in `.gitlab-ci.yml`
 * Pipelines run automatically on commits and merge requests
-* Authentication is handled via CI/CD variables
+* Authentication uses **OIDC + IAM role (no stored credentials)**
 * Terraform commands are executed inside pipeline jobs
 * Infrastructure changes follow a **plan → review → apply** workflow
 
----
 
 ## Prerequisites
 
@@ -21,7 +21,6 @@ Key ideas:
 * Terraform configuration files (`.tf`)
 * Basic familiarity with Git
 
----
 
 ## Repository Structure
 
@@ -33,40 +32,119 @@ Key ideas:
 └── .gitlab-ci.yml
 ```
 
----
 
-## Step 1 – Configure AWS Credentials
 
-In your GitLab project:
+## Step 1 – Configure AWS Authentication (OIDC + IAM Role)
+
+### Overview
+
+Use GitLab’s OIDC integration to assume an AWS IAM role at runtime.
+No `AWS_ACCESS_KEY_ID` or `AWS_SECRET_ACCESS_KEY` are stored.
+
+
+
+### Step 1A – Create IAM Role in AWS
+
+Create an IAM role with a trust policy allowing GitLab to assume it:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "Federated": "arn:aws:iam::<ACCOUNT_ID>:oidc-provider/gitlab.com"
+      },
+      "Action": "sts:AssumeRoleWithWebIdentity",
+      "Condition": {
+        "StringEquals": {
+          "gitlab.com:sub": "project_path:YOUR_GROUP/YOUR_PROJECT:ref_type:branch:ref:main"
+        }
+      }
+    }
+  ]
+}
+```
+
+Attach appropriate permissions for Terraform (e.g., EC2, S3, etc.).
+
+
+
+### Step 1B – Add CI/CD Variable
+
+In GitLab:
 
 **Settings → CI/CD → Variables**
 
-Add the following variables:
+Add:
 
 ```plaintext
-AWS_ACCESS_KEY_ID
-AWS_SECRET_ACCESS_KEY
-AWS_DEFAULT_REGION
+AWS_ROLE_ARN
 ```
 
-Recommended settings:
+Example:
 
-* Mark as **Masked**
-* Mark as **Protected** (for main branch)
+```plaintext
+arn:aws:iam::123456789012:role/gitlab-terraform-role
+```
 
-Terraform will automatically use these during execution.
+Mark as:
 
----
+* **Protected**
+* **Masked** (optional)
+
+
+
+### Step 1C – Configure OIDC in Pipeline
+
+Add to `.gitlab-ci.yml`:
+
+```yaml
+id_tokens:
+  AWS_ID_TOKEN:
+    aud: https://gitlab.com
+```
+
+
+
+### Step 1D – Export Token for AWS
+
+In the pipeline:
+
+```yaml
+before_script:
+  - echo "$AWS_ID_TOKEN" > /tmp/aws_token
+  - export AWS_WEB_IDENTITY_TOKEN_FILE=/tmp/aws_token
+  - export AWS_ROLE_ARN=$AWS_ROLE_ARN
+```
+
+
+
+### Step 1E – Terraform AWS Provider
+
+```hcl
+provider "aws" {
+  region = var.region
+}
+```
+
+Terraform will automatically use:
+
+* `AWS_ROLE_ARN`
+* `AWS_WEB_IDENTITY_TOKEN_FILE`
+
+
 
 ## Step 2 – Create the Pipeline Configuration
 
-Create a file named:
+Create:
 
 ```plaintext
 .gitlab-ci.yml
 ```
 
----
+
 
 ## Step 3 – Define Pipeline Stages
 
@@ -77,19 +155,31 @@ stages:
   - apply
 ```
 
----
+
 
 ## Step 4 – Configure Terraform Jobs
 
 ```yaml
 image: hashicorp/terraform:light
 
+stages:
+  - validate
+  - plan
+  - apply
+
 variables:
   TF_ROOT: .
   AWS_DEFAULT_REGION: us-east-1
 
+id_tokens:
+  AWS_ID_TOKEN:
+    aud: https://gitlab.com
+
 before_script:
   - cd $TF_ROOT
+  - echo "$AWS_ID_TOKEN" > /tmp/aws_token
+  - export AWS_WEB_IDENTITY_TOKEN_FILE=/tmp/aws_token
+  - export AWS_ROLE_ARN=$AWS_ROLE_ARN
 
 validate:
   stage: validate
@@ -115,7 +205,7 @@ apply:
     - main
 ```
 
----
+
 
 ## Step 5 – Commit and Run Pipeline
 
@@ -125,42 +215,35 @@ git commit -m "Add GitLab CI pipeline"
 git push
 ```
 
-This will:
+Pipeline will:
 
-1. Trigger pipeline execution
-2. Run `terraform validate`
-3. Generate a `terraform plan`
-4. Store the plan as an artifact
+1. Authenticate via OIDC
+2. Assume IAM role
+3. Run `terraform validate`
+4. Generate `terraform plan`
 
----
+
 
 ## Step 6 – Review Plan Output
 
 * Navigate to **CI/CD → Pipelines**
-* Open the latest pipeline
-* View logs from the `plan` job
+* Open pipeline
+* Inspect `plan` job logs
 
-Use this output to verify infrastructure changes before applying.
 
----
 
 ## Step 7 – Apply Changes
 
-* Go to the pipeline
-* Locate the `apply` job
-* Click **Run**
-
-This executes:
+* Open pipeline
+* Run `apply` job manually
 
 ```bash
 terraform apply tfplan
 ```
 
----
+
 
 ## Step 8 – Terraform State Management
-
-You should use a **remote backend** for state.
 
 ### Option A – GitLab Managed State
 
@@ -170,13 +253,7 @@ terraform {
 }
 ```
 
-GitLab provides:
 
-* Secure state storage
-* State locking
-* Versioning
-
----
 
 ### Option B – AWS S3 Backend
 
@@ -191,21 +268,19 @@ terraform {
 }
 ```
 
----
+
 
 ## Step 9 – Pipeline Behavior
 
 ### Automatic Execution
 
-Pipelines run on:
-
-* Code push
-* Merge request creation
+* Push
+* Merge request
 * Branch updates
 
----
 
-### Restrict Apply to Main Branch
+
+### Restrict Apply to Main
 
 ```yaml
 apply:
@@ -213,7 +288,7 @@ apply:
     - main
 ```
 
----
+
 
 ### Manual Approval
 
@@ -222,9 +297,7 @@ apply:
   when: manual
 ```
 
-Prevents unintended infrastructure changes.
 
----
 
 ## Step 10 – Passing Plan Between Stages
 
@@ -235,14 +308,9 @@ plan:
       - tfplan
 ```
 
-This ensures:
 
-* The exact plan reviewed is applied
-* No re-computation between stages
 
----
-
-## Step 11 – Caching Terraform Dependencies
+## Step 11 – Cache Terraform Dependencies
 
 ```yaml
 cache:
@@ -250,9 +318,7 @@ cache:
     - .terraform/
 ```
 
-Improves performance by avoiding repeated downloads.
 
----
 
 ## Step 12 – Environment Separation
 
@@ -264,27 +330,25 @@ envs/
   prod/
 ```
 
----
+
 
 ### Branch-Based
 
 * `main` → production
 * `develop` → development
 
----
+
 
 ## Step 13 – Security Best Practices
 
-* Store secrets only in CI/CD variables
-* Use protected branches for production
-* Avoid exposing sensitive output in logs
-* Limit access to pipeline execution
+* Use OIDC (no long-lived credentials)
+* Restrict IAM trust policy to specific branches
+* Use protected branches
+* Limit who can trigger pipelines
 
----
 
-## Step 14 – Optional: Use GitLab Terraform Helper
 
-GitLab provides a wrapper:
+## Step 14 – Optional Terraform Helper
 
 ```bash
 gitlab-terraform init
@@ -292,12 +356,7 @@ gitlab-terraform plan
 gitlab-terraform apply
 ```
 
-This simplifies:
 
-* State configuration
-* CI/CD integration
-
----
 
 ## Summary
 
@@ -313,3 +372,4 @@ This approach provides:
 * Controlled infrastructure changes
 * Repeatable deployments
 * Integration with GitLab CI/CD pipelines
+
